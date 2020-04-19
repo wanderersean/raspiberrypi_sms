@@ -1,0 +1,4 @@
+cfg.ini
+sms.db
+*.pyc
+__pycache__/

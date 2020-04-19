@@ -1,0 +1,13 @@
+[Unit]
+Description=sms deamon
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/sms
+ExecStart=/home/pi/berryconda3/bin/python sms.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
