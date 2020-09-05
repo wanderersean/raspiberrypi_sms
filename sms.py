@@ -165,6 +165,7 @@ class Saver(object):
             print('[ERROR]', e)
 
 if __name__ == '__main__':
+    # TODO 增加定时执行功能
     while(1):
         try:
             ser = serial.Serial('/dev/ttyAMA0', 115200, timeout=1)
