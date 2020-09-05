@@ -1,17 +1,19 @@
 #-*- coding:utf-8 -*-
-import serial 
+import serial
 import time
 import re
 from gsm_lib import GSM
 from email_sending import MailSender
 import sys
-
+from logger_config import logger
+import logging
 
 class Decoder(object):
     def __init__(self, msg):
+        self.logger = logging.getLogger('sms.Decoder')
         self.msg = msg
         self.phone_center = ''
-        self.timestamp = ''   
+        self.timestamp = ''
         self.phone_sender = ''
         self.head_info = {}
         self.content = ''
@@ -25,7 +27,7 @@ class Decoder(object):
         print('head info')
         for k,v in self.head_info.items():
             print('     ',k,v)
-        
+
     def __get_phone(self, text):
         ret = ''
         for i in range(0,len(text),2):
@@ -34,7 +36,7 @@ class Decoder(object):
                 ret += text[i]
             else:
                 ret += text[i]
-        
+
         return ret[2:-1] if ret[-1] == 'F' else ret[2:]
 
     def __get_timestamp(self, text):
@@ -46,7 +48,7 @@ class Decoder(object):
                 if i<= 2: ret += '/'
                 if i == 4: ret += ' '
                 if i>= 6: ret += ':'
-         
+
         return ret[:-4]
 
     def __to_unicode(self, text):
@@ -57,7 +59,7 @@ class Decoder(object):
                 t = eval(t)
                 ret = ret + t
             except:
-                print('[ERROR] in convert to unicode', t)
+                self.logger.error(f'转换到unicode失败:t为:{t}', exc_info=True)
         return ret
 
 
@@ -82,9 +84,9 @@ class Decoder(object):
         #发送人
         len2 = int(msg[index:index+2], 16)
         index = index+2
-        
+
         odd = 0 if len2%2 == 0 else 1
-        s_phone2 = msg[index:index+len2+2+odd]  # include 91 or A0 and 'F' 
+        s_phone2 = msg[index:index+len2+2+odd]  # include 91 or A0 and 'F'
         index = index+len2+2+odd+4
         self.phone_sender = self.__get_phone(s_phone2)
 
@@ -102,7 +104,7 @@ class Decoder(object):
 
             temp_index = index
             temp_index += 4
-            self.head_info['uniq_token'] = msg[temp_index:temp_index+2]  
+            self.head_info['uniq_token'] = msg[temp_index:temp_index+2]
             temp_index += 2
             self.head_info['total'] = int(msg[temp_index:temp_index+2], 16)
             temp_index += 2
@@ -110,7 +112,7 @@ class Decoder(object):
 
 #            user_info = msg[index:index+len_userinfo*2]
             index = index + len_userinfo*2
- 
+
         #消息内容
         self.content = self.__to_unicode(msg[index:])
 
@@ -128,21 +130,21 @@ def decode_encoded_messages(msgs):
             token = d.head_info['uniq_token']
             messages_temp.setdefault(token, [])
             messages_temp[token].append(d)
-            
+
         else:
             messages_nohead.append([d.timestamp, d.phone_sender, d.content])
-    
+
     for token, ds in messages_temp.items():
         temp = {}
         #按照时间来划分
         for d in ds:
             temp.setdefault(d.timestamp+'&'+d.phone_sender, ['' for i in range(d.head_info['total'])])
-            temp[d.timestamp+'&'+d.phone_sender][d.head_info['current']-1] = d.content 
+            temp[d.timestamp+'&'+d.phone_sender][d.head_info['current']-1] = d.content
         for k,v in temp.items():
             time, sender = k.split('&')
             text = ''.join(v)
             messages_head.append([time, sender, text])
-    
+
     messages = messages_head + messages_nohead
     messages = sorted(messages, key = lambda x:x[0])
     return messages
@@ -171,19 +173,21 @@ if __name__ == '__main__':
             while 1:
                 msgs = gsm.read_messages()
                 for i in decode_encoded_messages(msgs):
-                    print(i)
 
+                    logger.info(f'接收到短信:{i}, 开始写sms.db')
                     with open('sms.db','a') as f:
                         f.write('%s\n'%i)
 
-                    mail_sender.send('短信通知', '%s\r\n%s\r\n%s\r\n'%(i[0],i[1],i[2]) ) 
-            
+                    logger.info('写db成功，开始发送邮件')
+
+                    mail_sender.send('短信通知', '%s\r\n%s\r\n%s\r\n'%(i[0],i[1],i[2]))
+
                 gsm.delete_messages()# 暂时关闭
                 sys.stdout.flush()
                 time.sleep(10)
-            
+
         except Exception as e:
-            print(e)
+            logger.error('出错了。。。', exc_info=True)
         finally:
             ser.close()
-        
+

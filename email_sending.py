@@ -1,8 +1,10 @@
 #-*- coding:utf-8 -*-
 import yagmail
 from configparser import ConfigParser
+import logging
 class MailSender(object):
     def __init__(self):
+        self.logger = logging.getLogger('sms.MailSender')
         config = ConfigParser()
         config.read('cfg.ini', encoding='UTF-8') 
         user = config.get('mail', 'user')
@@ -18,7 +20,7 @@ class MailSender(object):
         contents = []
         contents.append(content) 
         self.yag.send(self.remote_addr, subject, contents)        
-        print('发送邮件成功')
+        self.logger.info('发送邮件成功')
 
 if __name__ == '__main__':
     m = MailSender()

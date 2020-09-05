@@ -2,9 +2,11 @@
 import serial 
 import time
 import re
-from email_sending import MailSender 
+from email_sending import MailSender
+import logging
 class GSM(object):
     def __init__(self,ser):
+        self.logger = logging.getLogger('sms.GSM')
         self.ser = ser
         self.p = re.compile(r'(?=\r\n(.*?)\r\n)', flags=re.DOTALL)
 
@@ -36,9 +38,6 @@ class GSM(object):
                 break
 
 
-
-        
-        
     def send_string(self, cmd):
         '''写串口和读串口'''
         self.ser.write(cmd.encode())
@@ -59,35 +58,36 @@ class GSM(object):
                 raise Exception
             return r
         except Exception as e:
-            print('[ERROR] failed to match re', ret)
+            self.logger.error(f'failed to match re, ret={ret.decode()}', exc_info=True)
             self.handle_other_info(ret)
+
             #再来一遍
             return self.send_string(cmd)
 
     def set_character_set(self):
         cmd = 'AT+CSCS="UCS2"\r'
         ret = self.send_string(cmd)
-        print('set character set', ret)
+        self.logger.debug('set character set', ret)
 
     def get_signal_strength(self):
         cmd = 'AT+CSQ\r'
         r = self.send_string(cmd)  # ['+CSQ: 14,0', 'OK']
-        print('signal strength', r)
+        self.logger.debug('signal strength', r)
 
     def set_mode(self,mode):
         if mode == 1:
             cmd = 'AT+CMGF=1\r'
             ret = self.send_string(cmd)
-            print('set_mode', ret)
+            self.logger.debug('set_mode', ret)
         else:
             cmd = 'AT+CMGF=0\r'
             ret = self.send_string(cmd)
-            print('set_mode',ret)
+            self.logger.debug('set_mode',ret)
 
     def set_CNMI(self):
         cmd = 'AT+CNMI=0,0,0,0,0\r'
         ret = self.send_string(cmd)
-        print('set_CNMI', ret)
+        self.logger.debug('set_CNMI', ret)
 
     def call_echo_incoming(self):
         cmd = 'AT+CLIP=1\r'
@@ -96,7 +96,7 @@ class GSM(object):
     def get_mem_use(self):
         cmd = 'AT+CPMS?\r'
         ret = self.send_string(cmd) # ['+CPMS: "SM",37,50,"SM",37,50,"SM",37,50', 'OK']
-        print('get_mem_use', ret)
+        self.logger.debug('get_mem_use', ret)
     
     def read_sms(self,i):
         cmd = 'AT+CMGR='+str(i)+'\r'
@@ -107,7 +107,7 @@ class GSM(object):
     def delete_sms(self,i):
         cmd = 'AT+CMGD='+str(i)+'\r'
         ret = self.send_string(cmd)
-        print(ret)
+        self.logger.debug(ret)
     
     def read_messages(self):
         cmd = 'AT+CMGL=4,0\r'
@@ -122,6 +122,7 @@ class GSM(object):
         #删除所有已经阅读过的短信
         cmd = 'AT+CMGDA=1\r'
         ret = self.send_string(cmd)
+        self.logger.debug(ret)
 
 
 
