@@ -2,3 +2,5 @@ cfg.ini
 sms.db
 *.pyc
 __pycache__/
+log.txt
+.idea/
