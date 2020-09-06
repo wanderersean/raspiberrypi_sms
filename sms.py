@@ -7,6 +7,7 @@ from email_sending import MailSender
 import sys
 from logger_config import logger
 import logging
+import retry
 
 class Decoder(object):
     def __init__(self, msg):
@@ -173,18 +174,23 @@ if __name__ == '__main__':
             mail_sender = MailSender()
             while 1:
                 msgs = gsm.read_messages()
+                gsm.delete_messages()
+
                 for i in decode_encoded_messages(msgs):
+                    try:
+                        logger.info(f'接收到短信:{i}, 开始写sms.db')
+                        with open('sms.db','a') as f:
+                            f.write('%s\n'%i)
 
-                    logger.info(f'接收到短信:{i}, 开始写sms.db')
-                    with open('sms.db','a') as f:
-                        f.write('%s\n'%i)
+                        logger.info('写db成功，开始发送邮件')
+                        mail_sender.send('短信通知', '%s\r\n%s\r\n%s\r\n'%(i[0],i[1],i[2]))
 
-                    logger.info('写db成功，开始发送邮件')
+                        sys.stdout.flush()
+                        time.sleep(2)
+                    except Exception:
+                        logger.error(f"发送短信出错了，跳过该条短信：{i}", exc_info=True)
+                        time.sleep(5)
 
-                    mail_sender.send('短信通知', '%s\r\n%s\r\n%s\r\n'%(i[0],i[1],i[2]))
-
-                gsm.delete_messages()# 暂时关闭
-                sys.stdout.flush()
                 time.sleep(10)
 
         except Exception as e:
