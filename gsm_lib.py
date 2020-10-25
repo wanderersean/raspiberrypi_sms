@@ -58,7 +58,7 @@ class GSM(object):
                 raise Exception
             return r
         except Exception as e:
-            self.logger.error(f'failed to match re, ret={ret.decode()}', exc_info=True)
+            self.logger.error(f'failed to match re, ret={ret}', exc_info=True)
             self.handle_other_info(ret)
 
             #再来一遍
