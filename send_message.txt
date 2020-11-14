@@ -1,0 +1,4 @@
+用当前手机号码发送短信,使用前需要关闭sms服务防止冲突
+需要在使用前配置gammu （sudo gammu-config 生成配置文件，存储在 /root/.gammu文件夹下)
+sudo gammu sendsms TEXT 95533 -text '88#88'
+sudo gammu sendsms TEXT +8613600000000 -text '88#88' -unicode (-unicode用于发生中文信息)
